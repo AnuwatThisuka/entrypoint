@@ -1,0 +1,77 @@
+# GoReleaser config — cross-compiles static binaries and publishes a GitHub
+# Release (archives + checksums) plus a Homebrew formula. No Node, no Bun, no
+# node_modules: the whole CLI ships as one self-contained binary.
+#
+# Local dry run:   goreleaser release --snapshot --clean
+# Real release:    git tag v0.1.0 && git push origin v0.1.0  (CI runs goreleaser)
+version: 2
+
+project_name: entrypoint
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: entrypoint
+    main: ./cmd/entrypoint
+    binary: entrypoint
+    env:
+      - CGO_ENABLED=0 # fully static — runs anywhere, no libc dependency
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/AnuwatThisuka/entrypoint/internal/cli.version={{ .Version }}
+
+archives:
+  - id: entrypoint
+    # Matches the name install.sh expects: entrypoint_<version>_<os>_<arch>.tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+# Homebrew: `brew install AnuwatThisuka/tap/entrypoint` (macOS).
+# Homebrew now ships prebuilt CLIs as casks (formulae are meant to build from
+# source), so this is a cask. Requires a tap repo named
+# AnuwatThisuka/homebrew-tap and HOMEBREW_TAP_GITHUB_TOKEN in CI with write
+# access. Linux users: use the curl|sh installer or `go install`.
+homebrew_casks:
+  - name: entrypoint
+    repository:
+      owner: AnuwatThisuka
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    homepage: "https://github.com/AnuwatThisuka/entrypoint"
+    description: "Lightweight, ticket-linked context checkpoints for AI coding agents"
+    # The binary is unsigned, so strip the Gatekeeper quarantine flag on
+    # install — otherwise macOS blocks the first run.
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr",
+              args: ["-dr", "com.apple.quarantine", "#{staged_path}/entrypoint"]
+          end
+
+release:
+  draft: false
+  prerelease: auto
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"

@@ -1,0 +1,23 @@
+# golangci-lint v2 config.
+version: "2"
+
+linters:
+  # Default set (errcheck, govet, ineffassign, staticcheck, unused) plus a
+  # few high-signal extras.
+  default: standard
+  enable:
+    - misspell
+    - unconvert
+  settings:
+    staticcheck:
+      checks:
+        - all
+        # ST1005: "error strings should not be capitalized / end with
+        # punctuation." Our errors are user-facing CLI messages (plain,
+        # full sentences by design — see AGENTS.md), not wrapped internal
+        # errors, so this Go convention doesn't apply here.
+        - "-ST1005"
+
+formatters:
+  enable:
+    - gofmt
