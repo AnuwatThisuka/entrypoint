@@ -65,7 +65,13 @@ trap 'rm -rf "$tmp"' EXIT
 log "downloading $archive ($tag)..."
 dlo "$base/$archive" "$tmp/$archive" || die "download failed: $base/$archive"
 
-if dlo "$base/checksums.txt" "$tmp/checksums.txt" 2>/dev/null; then
+# Checksum verification is mandatory: fail closed. Set ENTRYPOINT_SKIP_CHECKSUM=1
+# only if you understand you are disabling tamper/corruption detection.
+if [ "${ENTRYPOINT_SKIP_CHECKSUM:-0}" = "1" ]; then
+  log "warning: ENTRYPOINT_SKIP_CHECKSUM=1 — skipping checksum verification"
+else
+  dlo "$base/checksums.txt" "$tmp/checksums.txt" 2>/dev/null \
+    || die "could not download checksums.txt — refusing to install unverified. Set ENTRYPOINT_SKIP_CHECKSUM=1 to override."
   log "verifying checksum..."
   expected=$(grep " ${archive}\$" "$tmp/checksums.txt" | awk '{print $1}')
   [ -n "$expected" ] || die "no checksum listed for $archive"
@@ -74,13 +80,9 @@ if dlo "$base/checksums.txt" "$tmp/checksums.txt" 2>/dev/null; then
   elif have shasum; then
     actual=$(shasum -a 256 "$tmp/$archive" | awk '{print $1}')
   else
-    actual=""; log "warning: no sha256 tool found — skipping verification"
+    die "no sha256 tool (sha256sum/shasum) found — cannot verify. Install one, or set ENTRYPOINT_SKIP_CHECKSUM=1 to override."
   fi
-  if [ -n "$actual" ] && [ "$actual" != "$expected" ]; then
-    die "checksum mismatch — expected $expected, got $actual"
-  fi
-else
-  log "warning: checksums.txt not found — skipping verification"
+  [ "$actual" = "$expected" ] || die "checksum mismatch — expected $expected, got $actual"
 fi
 
 tar -xzf "$tmp/$archive" -C "$tmp"
@@ -95,7 +97,7 @@ if install_to "$bindir"; then
   :
 elif [ -z "${ENTRYPOINT_BINDIR:-}" ] && install_to "$HOME/.local/bin"; then
   bindir="$HOME/.local/bin"
-elif have sudo && sudo sh -c "mkdir -p '$bindir' && mv '$tmp/$BINARY' '$bindir/$BINARY'"; then
+elif have sudo && sudo mkdir -p "$bindir" && sudo mv "$tmp/$BINARY" "$bindir/$BINARY"; then
   :
 else
   die "could not write to $bindir — set ENTRYPOINT_BINDIR to a writable dir"
