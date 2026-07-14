@@ -1,28 +1,93 @@
-<h1 align="center">entrypoint</h1>
+![entrypoint repository cover](assets/gh-repo-cover.png)
 
-<p align="center">
-  <strong>Lightweight, ticket-linked context checkpoints for AI coding agents —
-  built for resuming, not replaying.</strong>
-</p>
+# entrypoint
+
+`entrypoint` is a lightweight tool that captures ticket-linked context
+checkpoints for AI coding agents, built for resuming work instead of replaying
+it.
+
+It captures a short, structured summary of _why_ an agent made the changes it
+made, links it to the ticket that motivated the work, and stores it inside your
+own git repo. When an agent starts a new session, it reads the latest packet
+instead of re-parsing a full transcript.
+
+It ships as a single static binary — no Node.js, no Bun, no `node_modules`.
+Install with one `curl | sh` or `brew install`.
 
 <p align="center">
   <a href="https://github.com/AnuwatThisuka/entrypoint/actions/workflows/ci.yml"><img src="https://github.com/AnuwatThisuka/entrypoint/actions/workflows/ci.yml/badge.svg" alt="ci"/></a>
   <a href="https://github.com/AnuwatThisuka/entrypoint/actions/workflows/release.yml"><img src="https://github.com/AnuwatThisuka/entrypoint/actions/workflows/release.yml/badge.svg" alt="release"/></a>
 </p>
 
-`entrypoint` captures a short, structured summary of _why_ an agent made the
-changes it made, links it to the ticket that motivated the work, and stores
-it inside your own git repo. When an agent starts a new session, it reads the
-latest packet instead of re-parsing a full transcript.
+- [Quick Start](#quick-start)
+- [Why not just use Entire?](#why-not-just-use-entire)
+- [How it works](#how-it-works)
+- [Install](#install)
+- [Usage](#usage)
+- [Auto-capture (Claude Code)](#auto-capture-claude-code)
+- [Packet format](#packet-format)
+- [For teams with compliance needs](#for-teams-with-compliance-needs)
+- [Troubleshooting](#troubleshooting)
+- [What is in this repo](#what-is-in-this-repo)
+- [Contributing](#contributing)
+- [License](#license)
 
-It ships as a **single static binary** — no Node.js, no Bun, no
-`node_modules`. Install with one `curl | sh` or `brew install`.
+## Quick Start
+
+### 1. Install entrypoint
+
+Homebrew (macOS / Linux):
+
+```bash
+brew install AnuwatThisuka/tap/entrypoint
+```
+
+Or `curl | sh`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/AnuwatThisuka/entrypoint/main/install.sh | sh
+```
+
+The install script detects your OS/arch, verifies the download against the
+release `checksums.txt`, and installs to `/usr/local/bin` (falling back to
+`~/.local/bin` if that isn't writable).
+
+### 2. Verify the install
+
+```bash
+entrypoint --version
+```
+
+If this prints `command not found`, the install directory isn't on your `$PATH`.
+`curl | sh` uses `/usr/local/bin` or `~/.local/bin`; `go install` uses
+`$(go env GOPATH)/bin`. Add the relevant one:
+
+```bash
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc   # then restart the shell
+```
+
+### 3. Capture your first packet
+
+Work with an agent on a ticket, then capture a checkpoint:
+
+```bash
+entrypoint capture --ticket 456 --goal "Fix timeout on bulk export"
+```
+
+### 4. Resume in the next session
+
+```bash
+entrypoint resume
+```
+
+The agent reads the latest packet — roughly 20 lines — and picks up where it
+left off, instead of re-reading a long transcript.
 
 ## Why not just use Entire?
 
-[Entire](https://entire.io) already does agent-session-to-git checkpointing,
-and does it well — multi-agent support, real-time capture, rewind, line-level
-blame. If you need that, use Entire.
+[Entire](https://entire.io) already does agent-session-to-git checkpointing, and
+does it well — multi-agent support, real-time capture, rewind, line-level blame.
+If you need that, use Entire.
 
 `entrypoint` exists for a narrower case: teams who want the _resume_ benefit
 without the storage and privacy tradeoffs of full transcript capture.
@@ -37,11 +102,11 @@ without the storage and privacy tradeoffs of full transcript capture.
 | Search                                  | Semantic search over transcripts | Keyword search over goals/decisions (business-readable)       |
 | Multi-agent, rewind, distributed mirror | Yes                              | Not in scope — see below                                      |
 
-`entrypoint` deliberately does **not** try to match Entire's full feature
-set. Out of scope, on purpose: multi-agent support beyond Claude Code,
-real-time / concurrent session tracking, file-level rewind, distributed git
-mirroring, two-way ticket sync, and embedding/semantic search. It's a resume
-tool, not a session recorder.
+`entrypoint` deliberately does **not** try to match Entire's full feature set.
+Out of scope, on purpose: multi-agent support beyond Claude Code, real-time /
+concurrent session tracking, file-level rewind, distributed git mirroring,
+two-way ticket sync, and embedding/semantic search. It's a resume tool, not a
+session recorder.
 
 ## How it works
 
@@ -98,21 +163,6 @@ curl -fsSL https://raw.githubusercontent.com/AnuwatThisuka/entrypoint/main/insta
 ```bash
 go install github.com/AnuwatThisuka/entrypoint/cmd/entrypoint@latest
 ```
-
-### Verify
-
-```bash
-entrypoint --version
-```
-
-> **PATH note.** If `entrypoint --version` prints `command not found` right
-> after install, the install directory isn't on your `$PATH`. `curl | sh`
-> uses `/usr/local/bin` or `~/.local/bin`; `go install` uses
-> `$(go env GOPATH)/bin`. Add the relevant one:
->
-> ```bash
-> echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc   # then restart the shell
-> ```
 
 ## Usage
 
@@ -184,9 +234,7 @@ Add to `.claude/settings.json`:
     "PostToolUse": [
       {
         "matcher": "Write|Edit|MultiEdit|NotebookEdit",
-        "hooks": [
-          { "type": "command", "command": "entrypoint hook track" }
-        ]
+        "hooks": [{ "type": "command", "command": "entrypoint hook track" }]
       }
     ]
   }
@@ -283,14 +331,27 @@ tool.
 shows current HEAD/push state and the last hook outcome; `doctor` runs
 non-interactive checks and prints the exact fix command for each failure.
 
-| Issue                                             | Likely cause                                                   | Solution                                                                                                                                        |
-| ------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `entrypoint: command not found` after install     | Install dir not on `$PATH`                                     | Add it — see the **PATH note** in [Install](#install).                                                                                          |
-| `capture` "did nothing" / hook skipped silently   | No new commit since the last packet — HEAD already carries one | Run `entrypoint status`; it names the reason. Make a new commit, then capture (or `entrypoint capture --force` to replace the packet on HEAD).  |
-| Auto-capture keeps skipping                       | Agent couldn't be resumed or its summary was unusable          | `entrypoint status` shows the specific reason from the last hook run. Capture manually: `entrypoint capture --auto --session-id <id>`.          |
-| Push rejected after `capture`                     | `capture` amended a commit you'd already pushed (new SHA)      | Capture warns inline with the exact command: `git push --force-with-lease <remote> <branch>`.                                                   |
-| Ticket titles don't auto-fill                     | `gh` not installed or not authenticated                        | `entrypoint doctor` flags it; run `gh auth login`.                                                                                              |
-| Teammate can't see your packets                   | Notes ref not pushed                                           | `entrypoint doctor` flags a local/remote mismatch; run `entrypoint sync --push` (or `entrypoint sync` to pull).                                 |
+| Issue                                           | Likely cause                                                   | Solution                                                                                                                                       |
+| ----------------------------------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `entrypoint: command not found` after install   | Install dir not on `$PATH`                                     | Add it — see the **PATH note** in [Quick Start](#quick-start).                                                                                 |
+| `capture` "did nothing" / hook skipped silently | No new commit since the last packet — HEAD already carries one | Run `entrypoint status`; it names the reason. Make a new commit, then capture (or `entrypoint capture --force` to replace the packet on HEAD). |
+| Auto-capture keeps skipping                     | Agent couldn't be resumed or its summary was unusable          | `entrypoint status` shows the specific reason from the last hook run. Capture manually: `entrypoint capture --auto --session-id <id>`.         |
+| Push rejected after `capture`                   | `capture` amended a commit you'd already pushed (new SHA)      | Capture warns inline with the exact command: `git push --force-with-lease <remote> <branch>`.                                                  |
+| Ticket titles don't auto-fill                   | `gh` not installed or not authenticated                        | `entrypoint doctor` flags it; run `gh auth login`.                                                                                             |
+| Teammate can't see your packets                 | Notes ref not pushed                                           | `entrypoint doctor` flags a local/remote mismatch; run `entrypoint sync --push` (or `entrypoint sync` to pull).                                |
+
+## What is in this repo
+
+- `cmd/entrypoint`
+  - the binary entrypoint
+- `internal/cli`
+  - command wiring
+- `internal/*`
+  - core logic: packet capture, redaction, blame, ticket adapters, signing
+- `internal/ticket`
+  - ticket-source adapter interface — new sources plug in here
+- `test/e2e`
+  - integration tests against scratch git repos
 
 ## Contributing
 
@@ -307,10 +368,6 @@ go test ./...         # run the suite (unit + end-to-end against scratch repos)
 go vet ./...          # vet
 golangci-lint run     # lint
 ```
-
-Layout: `cmd/entrypoint` is the binary entrypoint; command wiring lives in
-`internal/cli`, core logic in the other `internal/*` packages, and
-integration tests in `test/e2e`.
 
 ## License
 

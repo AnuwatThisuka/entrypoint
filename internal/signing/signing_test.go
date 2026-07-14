@@ -52,11 +52,56 @@ func TestCanonicalBodyNoHTMLEscape(t *testing.T) {
 }
 
 func TestVerifyUnsignedIsNotAnError(t *testing.T) {
-	res, err := Verify("", sample())
+	res, err := Verify("", "", sample())
 	if err != nil {
 		t.Fatal(err)
 	}
 	if res.Status != Unsigned {
 		t.Fatalf("expected unsigned, got %s", res.Status)
+	}
+}
+
+func TestSignerIdentity(t *testing.T) {
+	cases := []struct {
+		name      string
+		status    string
+		wantUID   string
+		wantEmail string
+	}{
+		{
+			name:      "name and email",
+			status:    "[GNUPG:] GOODSIG A1B2C3D4E5F6 Ada Lovelace <ada@example.com>",
+			wantUID:   "Ada Lovelace <ada@example.com>",
+			wantEmail: "ada@example.com",
+		},
+		{
+			name:      "email is lowercased",
+			status:    "[GNUPG:] GOODSIG DEADBEEF Grace <Grace@Example.COM>",
+			wantUID:   "Grace <Grace@Example.COM>",
+			wantEmail: "grace@example.com",
+		},
+		{
+			name:      "uid without email",
+			status:    "[GNUPG:] GOODSIG DEADBEEF anonymous",
+			wantUID:   "anonymous",
+			wantEmail: "",
+		},
+		{
+			name:      "no goodsig line",
+			status:    "[GNUPG:] NO_PUBKEY DEADBEEF",
+			wantUID:   "",
+			wantEmail: "",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			uid, email := signerIdentity(tc.status)
+			if uid != tc.wantUID {
+				t.Errorf("uid: got %q want %q", uid, tc.wantUID)
+			}
+			if email != tc.wantEmail {
+				t.Errorf("email: got %q want %q", email, tc.wantEmail)
+			}
+		})
 	}
 }

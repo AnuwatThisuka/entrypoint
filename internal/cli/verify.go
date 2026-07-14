@@ -44,9 +44,9 @@ func newVerify() *cobra.Command {
 				return nil
 			}
 
-			var signed, unsigned, unverifiable, tampered int
+			var signed, unsigned, unverifiable, tampered, mismatch int
 			for _, bp := range packets {
-				result, err := signing.Verify(cwd, bp.Packet)
+				result, err := signing.Verify(cwd, bp.CommitSha, bp.Packet)
 				if err != nil {
 					return err
 				}
@@ -54,7 +54,11 @@ func newVerify() *cobra.Command {
 				switch result.Status {
 				case signing.Signed:
 					signed++
-					fmt.Printf("%s  signed\n", head)
+					line := "signed"
+					if result.Detail != "" {
+						line = result.Detail
+					}
+					fmt.Printf("%s  %s\n", head, line)
 				case signing.Unsigned:
 					unsigned++
 					fmt.Printf("%s  unsigned\n", head)
@@ -65,6 +69,13 @@ func newVerify() *cobra.Command {
 						detail = "signer's key unknown"
 					}
 					fmt.Printf("%s  signed, can't verify — %s\n", head, detail)
+				case signing.SignerMismatch:
+					mismatch++
+					detail := result.Detail
+					if detail == "" {
+						detail = "signing key does not match the committer"
+					}
+					fmt.Printf("%s  SIGNER MISMATCH — %s\n", head, detail)
 				default:
 					tampered++
 					detail := result.Detail
@@ -79,12 +90,20 @@ func newVerify() *cobra.Command {
 			if unverifiable > 0 {
 				parts = append(parts, fmt.Sprintf("%d unverifiable", unverifiable))
 			}
+			if mismatch > 0 {
+				parts = append(parts, fmt.Sprintf("%d signer-mismatch", mismatch))
+			}
 			parts = append(parts, fmt.Sprintf("%d tampered", tampered))
 			fmt.Printf("\n%s: %s\n", branchLabel, strings.Join(parts, ", "))
 
 			if unverifiable > 0 {
 				fmt.Println("Unverifiable packets are signed by keys not in your keyring — " +
 					"import the signer's public key to check them.")
+			}
+			if mismatch > 0 {
+				fmt.Println("Signer-mismatch packets were signed by a key whose email is not " +
+					"the commit's committer. That can be a legit second key/email — or a " +
+					"packet re-signed by someone else. Confirm the signer before trusting it.")
 			}
 
 			// Only proven mismatches are an error; unverifiable is a warning.
