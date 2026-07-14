@@ -1,3 +1,5 @@
+![entrypoint repository cover](assets/gh-repo-cover.png)
+
 <h1 align="center">entrypoint</h1>
 
 <p align="center">
@@ -184,9 +186,7 @@ Add to `.claude/settings.json`:
     "PostToolUse": [
       {
         "matcher": "Write|Edit|MultiEdit|NotebookEdit",
-        "hooks": [
-          { "type": "command", "command": "entrypoint hook track" }
-        ]
+        "hooks": [{ "type": "command", "command": "entrypoint hook track" }]
       }
     ]
   }
@@ -283,14 +283,14 @@ tool.
 shows current HEAD/push state and the last hook outcome; `doctor` runs
 non-interactive checks and prints the exact fix command for each failure.
 
-| Issue                                             | Likely cause                                                   | Solution                                                                                                                                        |
-| ------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `entrypoint: command not found` after install     | Install dir not on `$PATH`                                     | Add it — see the **PATH note** in [Install](#install).                                                                                          |
-| `capture` "did nothing" / hook skipped silently   | No new commit since the last packet — HEAD already carries one | Run `entrypoint status`; it names the reason. Make a new commit, then capture (or `entrypoint capture --force` to replace the packet on HEAD).  |
-| Auto-capture keeps skipping                       | Agent couldn't be resumed or its summary was unusable          | `entrypoint status` shows the specific reason from the last hook run. Capture manually: `entrypoint capture --auto --session-id <id>`.          |
-| Push rejected after `capture`                     | `capture` amended a commit you'd already pushed (new SHA)      | Capture warns inline with the exact command: `git push --force-with-lease <remote> <branch>`.                                                   |
-| Ticket titles don't auto-fill                     | `gh` not installed or not authenticated                        | `entrypoint doctor` flags it; run `gh auth login`.                                                                                              |
-| Teammate can't see your packets                   | Notes ref not pushed                                           | `entrypoint doctor` flags a local/remote mismatch; run `entrypoint sync --push` (or `entrypoint sync` to pull).                                 |
+| Issue                                           | Likely cause                                                   | Solution                                                                                                                                       |
+| ----------------------------------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `entrypoint: command not found` after install   | Install dir not on `$PATH`                                     | Add it — see the **PATH note** in [Install](#install).                                                                                         |
+| `capture` "did nothing" / hook skipped silently | No new commit since the last packet — HEAD already carries one | Run `entrypoint status`; it names the reason. Make a new commit, then capture (or `entrypoint capture --force` to replace the packet on HEAD). |
+| Auto-capture keeps skipping                     | Agent couldn't be resumed or its summary was unusable          | `entrypoint status` shows the specific reason from the last hook run. Capture manually: `entrypoint capture --auto --session-id <id>`.         |
+| Push rejected after `capture`                   | `capture` amended a commit you'd already pushed (new SHA)      | Capture warns inline with the exact command: `git push --force-with-lease <remote> <branch>`.                                                  |
+| Ticket titles don't auto-fill                   | `gh` not installed or not authenticated                        | `entrypoint doctor` flags it; run `gh auth login`.                                                                                             |
+| Teammate can't see your packets                 | Notes ref not pushed                                           | `entrypoint doctor` flags a local/remote mismatch; run `entrypoint sync --push` (or `entrypoint sync` to pull).                                |
 
 ## Contributing
 
