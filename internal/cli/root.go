@@ -30,6 +30,7 @@ func newRoot() *cobra.Command {
 		SilenceUsage:  true,
 	}
 	root.AddCommand(
+		newInit(),
 		newCapture(),
 		newResume(),
 		newLog(),

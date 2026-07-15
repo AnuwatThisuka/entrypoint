@@ -172,6 +172,9 @@ go install github.com/AnuwatThisuka/entrypoint/cmd/entrypoint@latest
 ## Usage
 
 ```bash
+# Initialize local metadata (cache DB + Claude Code hooks) in this repo
+entrypoint init
+
 # Capture a packet manually
 entrypoint capture --ticket 456 --goal "Fix timeout on bulk export"
 
@@ -221,9 +224,35 @@ is pull-only (it will never touch your branches or working tree), and
 `entrypoint sync --push` publishes your local packets. A typical team loop is
 `capture` → `sync --push` on one machine, `sync` → `resume` on the other.
 
+## Initialize a repository
+
+`entrypoint init` sets up the per-repo state the CLI needs. Run it once from
+the root of a git repository:
+
+```bash
+entrypoint init
+```
+
+It does three things:
+
+1. **Verifies** the current directory is a git repository (a `.git/` directory
+   must exist) — otherwise it stops with a clear message.
+2. **Creates** the local metadata directory `.git/entrypoint/` and initializes
+   a SQLite database `.git/entrypoint/entrypoint_cache.db` — a local buffer for
+   asynchronous event processing. Both live under `.git/`, so they are never
+   committed with your project sources.
+3. **Injects** the standard Claude Code hooks into `.claude/settings.json` (the
+   `SessionEnd` + `PostToolUse` wiring below). If that file already defines a
+   `hooks` key, `init` leaves it untouched rather than overwriting your config.
+
+`init` is idempotent — re-running it reuses the existing directory and database
+and reports which steps were already in place.
+
 ## Auto-capture (Claude Code)
 
-`entrypoint` bundles the Claude Code hooks as subcommands, so ending a
+`entrypoint init` writes the configuration below for you; the JSON is shown
+here so you can add or audit it by hand. `entrypoint` bundles the Claude Code
+hooks as subcommands, so ending a
 session writes a packet with no manual CLI invocation. On session end the
 agent that just finished is asked to summarize the session (goal, decisions,
 next steps) as a short JSON reply — the transcript itself is never stored.
@@ -355,6 +384,8 @@ non-interactive checks and prints the exact fix command for each failure.
   - core logic: packet capture, redaction, blame, ticket adapters, signing
 - `internal/ticket`
   - ticket-source adapter interface — new sources plug in here
+- `internal/net`
+  - Meshwire private-network validation (`10.64.0.0/16` scope check)
 - `test/e2e`
   - integration tests against scratch git repos
 
