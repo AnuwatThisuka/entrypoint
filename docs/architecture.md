@@ -38,3 +38,29 @@ The non-negotiable invariants (I1–I8) that constrain every phase are in
 - `go.mod` already targets a Go version at or above the plan's `go 1.24` floor;
   left unchanged (no downgrade, per plan task 1).
 - Added this document.
+
+### Phase A — Normalized core + importers
+
+- Added `internal/checkpoint`, the normalized core domain:
+  - `model.go` — `Session`, `Summary`, `Source`, `Commit`, `Ticket`,
+    `Visibility`, `DeriveID`, `Normalize`, `ErrIncomplete`. `DeriveID` is a
+    content hash over `(importer, native id)` giving a stable `Session.ID` for
+    idempotent upsert / at-least-once ingest dedup. `Normalize` fails
+    visibility *safe* (unknown → redacted, I3) and normalizes timestamps to UTC.
+  - `importer.go` — `Importer`, `RawSession` (thin: identity + lazy blob
+    reader, so transcripts stay by-reference, I3), `Registry` (dispatch by
+    importer name).
+  - `index.go` — `Index`, `Query`, `ErrNotFound` (interface contract only;
+    the SQLite implementation lands in Phase C).
+- Added importers under `internal/importer` (the core imports none of them —
+  I4, verified via `go list -deps`):
+  - `entire` — maps Entire's `metadata.json` and is the *only* package that
+    names `metadata.json`/`prompt.txt`/`full.jsonl`; raw prompt/transcript
+    blobs are never read (I3), only exposed as `ByReferenceFiles`. Unknown
+    metadata keys are preserved into `Session.Extra`.
+  - `entrypoint` — maps the native `internal/packet.Packet` (reconciling the
+    two domains into one normalized type); `FromPacket` is the seam for the
+    capture path, native-only fields (version, inProgress, blocks) preserved
+    into `Extra`, GPG signature intentionally not indexed.
+  - `registry.go` (`package importer`) — `Default()` wires both importers;
+    the dependency arrow is `checkpoint <- entire/entrypoint <- importer <- cmd`.
