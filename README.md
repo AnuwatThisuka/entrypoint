@@ -14,6 +14,11 @@ instead of re-parsing a full transcript.
 It ships as a single static binary — no Node.js, no Bun, no `node_modules`.
 Install with one `curl | sh` or `brew install`.
 
+> [!WARNING]
+> **Proof of concept.** `entrypoint` is an early PoC. The packet format,
+> commands, and storage layout may change without notice, and there are no
+> backward-compatibility guarantees yet. Not recommended for production use.
+
 <p align="center">
   <a href="https://github.com/AnuwatThisuka/entrypoint/actions/workflows/ci.yml"><img src="https://github.com/AnuwatThisuka/entrypoint/actions/workflows/ci.yml/badge.svg" alt="ci"/></a>
   <a href="https://github.com/AnuwatThisuka/entrypoint/actions/workflows/release.yml"><img src="https://github.com/AnuwatThisuka/entrypoint/actions/workflows/release.yml/badge.svg" alt="release"/></a>
