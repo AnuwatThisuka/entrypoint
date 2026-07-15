@@ -266,7 +266,7 @@ func TestSyncPushAndFetch(t *testing.T) {
 
 	// Bare remote to push notes to.
 	bare := t.TempDir()
-	if out, err := exec.Command("git", "init", "--bare", bare).CombinedOutput(); err != nil {
+	if out, err := exec.Command("git", "init", "--bare", "--initial-branch=main", bare).CombinedOutput(); err != nil {
 		t.Fatalf("init bare: %v\n%s", err, out)
 	}
 	r.Git("remote", "add", "origin", bare)
