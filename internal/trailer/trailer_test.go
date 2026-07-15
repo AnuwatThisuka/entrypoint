@@ -28,6 +28,23 @@ func TestParsePacketIDsNone(t *testing.T) {
 	}
 }
 
+func TestParseLinkedIDs(t *testing.T) {
+	msg := "feat: thing\n\nEntrypoint-Packet: pk_deadbeef\n" +
+		"Entire-Checkpoint: chk_123\nEntire-Metadata: meta/abc-1\n"
+	got := ParseLinkedIDs(msg)
+	want := []string{"pk_deadbeef", "chk_123", "meta/abc-1"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseLinkedIDsIgnoresUnknownTrailers(t *testing.T) {
+	msg := "x\n\nSigned-off-by: someone\nCo-Authored-By: other\n"
+	if ids := ParseLinkedIDs(msg); len(ids) != 0 {
+		t.Fatalf("expected none, got %v", ids)
+	}
+}
+
 func TestStripPacketTrailers(t *testing.T) {
 	msg := "subject\n\nEntrypoint-Packet: pk_deadbeef\nSigned-off-by: x\n"
 	got := StripPacketTrailers(msg)

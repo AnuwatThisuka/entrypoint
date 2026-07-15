@@ -64,3 +64,29 @@ The non-negotiable invariants (I1–I8) that constrain every phase are in
     into `Extra`, GPG signature intentionally not indexed.
   - `registry.go` (`package importer`) — `Default()` wires both importers;
     the dependency arrow is `checkpoint <- entire/entrypoint <- importer <- cmd`.
+
+### Phase B — Git as source of truth (ref reader/writer)
+
+- Added `internal/gitstore` (`RefWalker`), pure go-git, never shelling out and
+  never touching the working tree or code branches:
+  - `Fetch` — single-ref fetch via an anonymous remote (one refspec only).
+  - `Walk` — `iter.Seq2[RawSession, error]`, one session per top-level subtree;
+    `RawSession.File` lazily reads sibling blobs so transcripts are never read
+    eagerly (I3).
+  - `CommitLinks` — read-only log scan mapping native record id → code commit
+    sha, recognizing `Entrypoint-Packet` and `Entire-Checkpoint`/`Entire-Metadata`
+    trailers.
+  - `Rebuild` — walk → map via `Registry` → overlay `Commit.SHA` from links
+    when empty (fills the gap `FromPacket` left). Shared primitive for Phase C's
+    `rebuild-index` and Phase E's ingest.
+  - `WritePacket` — writes entrypoint's own records to `refs/entrypoint/packets/v1`
+    as `<id>/packet.json`, storing the **full body including the GPG signature**
+    so records stay verifiable from git ("not indexed" ≠ "discarded"). Builds
+    blob/tree/commit objects and moves the ref via the object store; no checkout.
+- Extended `internal/trailer` with `Entire-*` keys and `ParseLinkedIDs`.
+- **go-git version deviation:** the plan names go-git **v6**, but v6 has no
+  stable release (alpha only). We depend on the stable **v5** line — equally
+  pure-Go / no-CGO, so I5 holds. CGO-off cross-compile for linux/darwin ×
+  amd64/arm64 verified.
+- The existing notes-based capture and `entrypoint verify` paths are left
+  untouched; Phase B only adds a ref reader/writer alongside them.
