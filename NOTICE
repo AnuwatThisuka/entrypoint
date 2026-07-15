@@ -1,0 +1,24 @@
+entrypoint / entrypointd
+Copyright (c) 2026 Anuwat Thisuka
+
+This product is licensed under the MIT License (see LICENSE).
+
+---------------------------------------------------------------------------
+Provenance statement (Invariant I7)
+---------------------------------------------------------------------------
+
+entrypoint is an independent, clean-room implementation. As of Phase 0 it
+contains NO source code copied or derived from Entire (github.com/entireio/cli)
+or any other agent-checkpointing product. The comparison to Entire in README.md
+is editorial positioning only, not a code lineage.
+
+The concepts entrypoint implements natively — git-notes-attached work packets,
+the `Entrypoint-Packet` commit trailer, Meshwire range validation — were
+written for this repository and carry only the copyright above.
+
+If, in a later phase, any file becomes derived from a third party's licensed
+code, that file must (a) preserve the upstream copyright + license header and
+(b) be recorded in THIRD_PARTY.md before it is merged.
+
+Third-party dependencies redistributed in built binaries are listed, with their
+licenses, in THIRD_PARTY.md.

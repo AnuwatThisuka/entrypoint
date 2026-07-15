@@ -69,3 +69,8 @@ jobs:
           install-only: true
       - name: validate .goreleaser.yaml
         run: goreleaser check
+
+      # Cross-compile dry run: guarantees linux/darwin × amd64/arm64 stay
+      # buildable every phase without publishing anything (Invariant I5).
+      - name: goreleaser snapshot (cross-compile)
+        run: goreleaser release --snapshot --clean --skip=publish

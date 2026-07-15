@@ -20,16 +20,6 @@ type StreamPacket struct {
 	Timestamp time.Time
 	Actor     string
 	Payload   string
-
-	// meta holds transport details that never leave the process — it stays
-	// unexported so callers can't accidentally serialize node internals.
-	meta streamMeta
-}
-
-// streamMeta is the internal, non-serialized metadata for a StreamPacket.
-type streamMeta struct {
-	NodeID   string
-	ClientIP string
 }
 
 // VerifyMeshwireInterface reports whether serverAddr falls inside the private
